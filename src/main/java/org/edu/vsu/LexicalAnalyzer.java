@@ -1,18 +1,16 @@
 package org.edu.vsu;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 import static java.lang.Math.*;
 
 public class LexicalAnalyzer{
     private int curr;
     private String data;
-    private interface predicate{
+    public interface predicate{
         boolean isTrue(char c);
     }
-    private interface MathOperators{
+    public interface MathOperators{
         int calculate(List<Integer> args) throws IllegalArgumentException;}
     private String parsedLexeme(predicate tokenCondition, int pos){
         char c = data.charAt(pos);
@@ -29,11 +27,10 @@ public class LexicalAnalyzer{
         } while (!eoToken && tokenCondition.isTrue(c));
         return sb.toString();
     }
-    public Map<String, MathOperators> mathFunctions = new HashMap<>();
+    public Map<String, MathOperators> mathFunctions;
     public Map<String, Integer> variables = new HashMap<>();
-    private ArrayList<Lexeme> lexemes = new ArrayList<>();
-
-    private void parser(){
+    public ArrayList<Lexeme> lexemes = new ArrayList<>();
+    private void parse(){
         predicate numberCondition = c -> (c <= 57 && c >= 48);
         predicate letterCondition = c -> ((c <= 90 && c >= 65) || (c <= 122 && c >= 97));
         int pos = 0;
@@ -105,11 +102,12 @@ public class LexicalAnalyzer{
         }
     }
     public LexicalAnalyzer(String expression) {
-        data = new String(expression);
+        data = (expression);
+        mathFunctions = new HashMap<>();
         mathFunctions.put("min", args -> {
-            if (args.isEmpty()) {
-                throw new IllegalArgumentException("Function min should have at least 1 argument.");
-            }
+          if (args.isEmpty()) {
+              throw new IllegalArgumentException("Function min should have at least 1 argument.");
+          }
             int min = args.get(0);
             for (Integer val: args) {
                 if (val < min) {
@@ -134,39 +132,52 @@ public class LexicalAnalyzer{
             if (args.size() != 1) {
                 throw new IllegalArgumentException("Function sin should have 1 and only argument. Current count: " + args.size());
             }
-            return  (int) sin(args.get(0));
+            return  (int) Math.round(sin(args.get(0)));
         });
         mathFunctions.put("cos", args -> {
             if (args.size() != 1) {
                 throw new IllegalArgumentException("Function cos should have 1 and only argument. Current count: " + args.size());
             }
-            return (int) cos(args.get(0));
+            return (int) Math.round(cos(args.get(0)));
         });
         mathFunctions.put("pow", args -> {
             if (args.size() != 2) {
-                throw new RuntimeException("Function pov should have 2 arguments. Current count: " + args.size());
+                throw new IllegalArgumentException("Function pov should have 2 arguments. Current count: " + args.size());
             }
             return (int) Math.pow(args.get(0), args.get(1));
         });
-        parser();
-    }
-    public Lexeme next() {
-        return lexemes.get(curr++);
-    }
-    public void prev() {
-        curr = curr - 1;
-    }
-    public int getPosition() {
-        return curr;
+        parse();
+        if(!checkBrackets())
+            throw new IllegalArgumentException("There is brackets inbalance.");
+        readVariables();
     }
 
+    private void readVariables(){
+        Scanner input = new Scanner( System.in );
+        for (Map.Entry<String, Integer> entry : variables.entrySet()) {
+            StringBuilder str = new StringBuilder();
+            str.append(entry.getKey()).append(" = ");
+            System.out.print(str);
+            entry.setValue(input.nextInt());
+        }
+    }
+    private boolean checkBrackets(){
+        int count = 0, i = 0;
+        while(i < lexemes.size() && count >= 0){
+            if(lexemes.get(i).type == Lexeme.Token.LBRACE)
+                    count += 1;
+            else if(lexemes.get(i).type == Lexeme.Token.RBRACE)
+                count -= 1;
+            ++i;
+        }
+        return count == 0 ? true:false;
+    }
     @Override
     public String toString() {
         return "LexicalAnalyzer{" +
                 "data='" + data + '\'' +
                 ",\nmathFunctions=" + mathFunctions +
                 ",\nvariables=" + variables +
-                ",\nlexemes=" + lexemes +
                 '}';
     }
 }
