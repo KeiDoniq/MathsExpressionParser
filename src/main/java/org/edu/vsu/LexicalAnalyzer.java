@@ -1,35 +1,24 @@
 package org.edu.vsu;
 
 import java.util.*;
-
 import static java.lang.Math.*;
 
 public class LexicalAnalyzer{
-    private int curr;
-    private String data;
-    public interface predicate{
-        boolean isTrue(char c);
+    private final String data;
+    private final Map<String, MathOperators> mathFunctions;
+    private final Map<String, Integer> variables = new HashMap<>();
+    private final ArrayList<Lexeme> lexemes = new ArrayList<>();
+    /**
+     * ¬озвращает список лексем.
+     *
+     * @return список лексем.
+     */
+    public ArrayList<Lexeme> getLexemes() {
+        return lexemes;
     }
-    public interface MathOperators{
-        int calculate(List<Integer> args) throws IllegalArgumentException;}
-    private String parsedLexeme(predicate tokenCondition, int pos){
-        char c = data.charAt(pos);
-        boolean eoToken = false;
-        StringBuilder sb = new StringBuilder();
-        do {
-            sb.append(c);
-            ++pos;
-            if (pos >= data.length()) {
-                eoToken = true;
-            }
-            else
-                c = data.charAt(pos);
-        } while (!eoToken && tokenCondition.isTrue(c));
-        return sb.toString();
-    }
-    public Map<String, MathOperators> mathFunctions;
-    public Map<String, Integer> variables = new HashMap<>();
-    public ArrayList<Lexeme> lexemes = new ArrayList<>();
+    /**
+     * ¬ыполн€ет лексический анализ входной строки и разбивает ее на лексемы.
+     */
     private void parse(){
         predicate numberCondition = c -> (c <= 57 && c >= 48);
         predicate letterCondition = c -> ((c <= 90 && c >= 65) || (c <= 122 && c >= 97));
@@ -77,6 +66,11 @@ public class LexicalAnalyzer{
                     ++pos;
                     break;
                 }
+                case '^': {
+                    lexemes.add(new Lexeme(Lexeme.Token.POV_OPERATOR, c));
+                    ++pos;
+                    break;
+                }
                 case ',': {
                     lexemes.add(new Lexeme(Lexeme.Token.COMMA, c));
                     ++pos;
@@ -97,11 +91,63 @@ public class LexicalAnalyzer{
                             }
                             pos = pos + strLexeme.length();
                     }
-                    else throw new IllegalArgumentException("Lexer Error. Unexpexted symbol at position " + pos);
+                    else throw new IllegalArgumentException("Lexer Error. Unexpected symbol at position " + pos);
             }
         }
     }
-    public LexicalAnalyzer(String expression) {
+    /**
+     * ѕарсит лексему по заданному условию.
+     *
+     * @param tokenCondition условие дл€ определени€ конца лексемы.
+     * @param pos начальна€ позици€ в строке.
+     * @return строковое значение лексемы.
+     */
+    private String parsedLexeme(predicate tokenCondition, int pos){
+        char c = data.charAt(pos);
+        boolean eoToken = false;
+        StringBuilder sb = new StringBuilder();
+        do {
+            sb.append(c);
+            ++pos;
+            if (pos >= data.length()) {
+                eoToken = true;
+            }
+            else
+                c = data.charAt(pos);
+        } while (!eoToken && tokenCondition.isTrue(c));
+        return sb.toString();
+    }
+    /**
+     * ¬озвращает исходное выражение.
+     *
+     * @return исходное выражение.
+     */
+    public String getData() {
+        return data;
+    }
+    /**
+     * ¬озвращает карту математических функций.
+     *
+     * @return карта математических функций.
+     */
+    public Map<String, MathOperators> getMathFunctions() {
+        return mathFunctions;
+    }
+    /**
+     * ¬озвращает карту переменных.
+     *
+     * @return карта переменных.
+     */
+    public Map<String, Integer> getVariables() {
+        return variables;
+    }
+    /**
+     *  онструктор, принимающий строковое выражение дл€ лексического анализа.
+     *
+     * @param expression строковое выражение.
+     * @throws IllegalArgumentException в случае ошибки анализа.
+     */
+    public LexicalAnalyzer(String expression) throws IllegalArgumentException {
         data = (expression);
         mathFunctions = new HashMap<>();
         mathFunctions.put("min", args -> {
@@ -148,19 +194,25 @@ public class LexicalAnalyzer{
         });
         parse();
         if(!checkBrackets())
-            throw new IllegalArgumentException("There is brackets inbalance.");
+            throw new IllegalArgumentException("There is brackets unbalance.");
         readVariables();
     }
 
+    /**
+     * «апрашивает у пользовател€ через консоль значени€ переменных.
+     */
     private void readVariables(){
         Scanner input = new Scanner( System.in );
         for (Map.Entry<String, Integer> entry : variables.entrySet()) {
-            StringBuilder str = new StringBuilder();
-            str.append(entry.getKey()).append(" = ");
-            System.out.print(str);
+            System.out.print(entry.getKey() + " = ");
             entry.setValue(input.nextInt());
         }
     }
+    /**
+     * ѕровер€ет сбалансированность скобок в выражении.
+     *
+     * @return true, если скобки сбалансированы, иначе false.
+     */
     private boolean checkBrackets(){
         int count = 0, i = 0;
         while(i < lexemes.size() && count >= 0){
@@ -170,7 +222,22 @@ public class LexicalAnalyzer{
                 count -= 1;
             ++i;
         }
-        return count == 0 ? true:false;
+        return count == 0;
+    }
+
+    /**
+     * »нтерфейс, задающий общий вид предиката дл€ проверок при парсинге токенов,
+     * состо€щих более, чем из одного символа -- чисел и названий переменных/функций.
+     */
+    interface predicate{
+        boolean isTrue(char c);
+    }
+
+    /**
+     * »нтерфейс, определ€ющий мвтематические операции.
+     */
+    interface MathOperators{
+        int calculate(List<Integer> args) throws IllegalArgumentException;
     }
     @Override
     public String toString() {
